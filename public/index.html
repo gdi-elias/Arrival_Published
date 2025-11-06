@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dental Office Check-in</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 100%;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2, h3 {
+            color: white;
+            font-weight: 500;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1vw;
+            width: min(90%, 300px);
+            margin: 20px auto;
+            background-color: #000;
+            padding: 1.5vw;
+            border-radius: 20px;
+            aspect-ratio: 1/1.3;
+        }
+        .numpad button {
+            width: 100%;
+            aspect-ratio: 1/1;
+            padding: 0;
+            font-size: clamp(16px, 2.5vw, 24px);
+            font-weight: 500;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+            background-color: #333;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .numpad button::before {
+            content: '';
+            display: block;
+            padding-top: 100%;
+        }
+        .numpad button span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .numpad button:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        .numpad button.btn-primary {
+            background-color: #333;
+        }
+        .numpad button.btn-primary:hover {
+            background-color: #444;
+        }
+        .numpad button.btn-success {
+            background-color: #ff9500;
+        }
+        .numpad button.btn-success span {
+            display: block;
+            text-align: center;
+            width: 100%;
+            font-size: clamp(14px, 2vw, 18px);
+        }
+        .numpad button.btn-success:hover {
+            background-color: #ffa533;
+        }
+        .numpad button.btn-danger {
+            background-color: #a5a5a5;
+            color: #000;
+        }
+        .numpad button.btn-danger:hover {
+            background-color: #b5b5b5;
+        }
+        .display {
+            width: min(90%, 300px);
+            padding: 10px;
+            margin: 10px auto;
+            background-color: #000;
+            border-radius: 10px;
+            min-height: 80px;
+        }
+        .display input {
+            font-size: clamp(24px, 3vw, 36px);
+            text-align: center;
+            letter-spacing: 4px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            border: none;
+            border-radius: 0;
+            padding: 15px 10px;
+            background-color: #000;
+            color: white;
+            width: 100%;
+            box-sizing: border-box;
+            height: auto;
+            min-height: 80px;
+            line-height: 1.2;
+        }
+        .message {
+            width: min(90%, 300px);
+            margin: 0 auto 20px;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: clamp(18px, 2.5vw, 22px);
+            background-color: #000;
+            color: white;
+            display: none;
+            border: 1px solid #333;
+        }
+        .message.text-success {
+            background-color: #000;
+            color: white;
+            display: block;
+        }
+        .message.text-danger {
+            background-color: #000;
+            color: white;
+            display: block;
+        }
+        .message.text-info {
+            background-color: #000;
+            color: white;
+            display: block;
+        }
+
+        .language-toggle {
+            width: min(90%, 300px);
+            margin: 10px auto;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: clamp(18px, 2.5vw, 22px);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .language-toggle:hover {
+            background-color: #444;
+        }
+
+        .language-toggle .flag {
+            font-size: 1.2em;
+        }
+
+        @media (min-width: 768px) {
+            .numpad {
+                width: min(70%, 350px);
+            }
+            .display {
+                width: min(70%, 350px);
+            }
+            .message {
+                width: min(70%, 350px);
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .numpad {
+                width: min(50%, 400px);
+            }
+            .display {
+                width: min(50%, 400px);
+            }
+            .message {
+                width: min(50%, 400px);
+            }
+        }
+
+        .datetime {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            left: auto;
+            font-size: 1.2em;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 12px 14px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+        .site-logos {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: auto;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .site-logo {
+            height: 60px;
+            width: auto;
+            max-width: 220px;
+            object-fit: contain;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 10px;
+            border-radius: 8px;
+        }
+        /* Light/Dark theme support */
+        body.light-mode {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        body.light-mode .numpad button {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+        body.light-mode .numpad button.btn-primary {
+            background-color: #0d6efd;
+            color: white;
+        }
+        body.light-mode .numpad button.btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        body.light-mode .numpad button.btn-success {
+            background-color: #198754;
+            color: white;
+        }
+        body.light-mode .display input {
+            background-color: #fff;
+            color: #212529;
+            border: 1px solid #ced4da;
+        }
+        body.light-mode .datetime {
+            /* remove white boxed background in light mode; keep text visible */
+            background-color: transparent !important;
+            color: #212529;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+        body.light-mode .message {
+            background-color: white;
+            color: #212529;
+            border: 1px solid #dee2e6;
+        }
+        body.light-mode h2, body.light-mode h3 {
+            color: #212529 !important;
+        }
+        /* Additional overrides to ensure light mode overrides darker defaults.
+           Restore the iOS-like button palette while in light mode: dark circular
+           numeric buttons, orange confirm, gray clear with black text. */
+        body.light-mode .numpad button {
+            background-color: #333 !important; /* dark circular buttons */
+            color: #fff !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important;
+        }
+        body.light-mode .numpad button.btn-primary {
+            background-color: #333 !important;
+            color: #fff !important;
+        }
+        body.light-mode .numpad button.btn-primary:hover {
+            background-color: #444 !important;
+        }
+        body.light-mode .numpad button.btn-success {
+            background-color: #ff9500 !important; /* orange like iOS */
+            color: #fff !important;
+            box-shadow: none !important;
+        }
+        body.light-mode .numpad button.btn-success:hover {
+            background-color: #ffa533 !important;
+        }
+        body.light-mode .numpad button.btn-danger {
+            background-color: #a5a5a5 !important; /* light gray clear */
+            color: #000 !important;
+            box-shadow: none !important;
+        }
+        body.light-mode .numpad button.btn-danger:hover {
+            background-color: #b5b5b5 !important;
+        }
+        body.light-mode .language-toggle {
+            background-color: #fff !important;
+            color: #212529 !important;
+            border: 1px solid #dee2e6 !important;
+        }
+        body.light-mode .site-logo {
+            /* allow transparent logo to show through in light mode */
+            background: transparent !important;
+            padding: 0 !important;
+        }
+        /* Fix: make numpad container light in light mode so buttons don't appear inside a black box */
+        body.light-mode .numpad {
+            background-color: transparent !important;
+        }
+        /* Ensure display area matches light theme */
+        body.light-mode .display {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        /* Ensure the input has visible text and no dark background */
+        body.light-mode .display input {
+            /* make the display input transparent with dark text and no border */
+            background-color: transparent !important;
+            color: #212529 !important;
+            box-shadow: none !important;
+            border: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="datetime" id="datetime"></div>
+    <div id="siteLogos" class="site-logos"></div>
+    <div class="container text-center">
+        <h2 data-lang="is">Komuskráning</h2>
+        <h2 data-lang="en" style="display: none;">Arrival registry</h2>
+        <h3 data-lang="is">Vinsamlegast sláðu inn kennitöluna þína</h3>
+        <h3 data-lang="en" style="display: none;">Please enter your social security number</h3>
+        
+        <div class="display">
+            <input type="text" id="ssnDisplay" class="form-control" readonly value="" />
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="numpad">
+            <button class="btn btn-primary" onclick="addDigit('1')">1</button>
+            <button class="btn btn-primary" onclick="addDigit('2')">2</button>
+            <button class="btn btn-primary" onclick="addDigit('3')">3</button>
+            <button class="btn btn-primary" onclick="addDigit('4')">4</button>
+            <button class="btn btn-primary" onclick="addDigit('5')">5</button>
+            <button class="btn btn-primary" onclick="addDigit('6')">6</button>
+            <button class="btn btn-primary" onclick="addDigit('7')">7</button>
+            <button class="btn btn-primary" onclick="addDigit('8')">8</button>
+            <button class="btn btn-primary" onclick="addDigit('9')">9</button>
+            <button class="btn btn-danger" onclick="clearSSN()" data-lang="is">Hreinsa</button>
+            <button class="btn btn-danger" onclick="clearSSN()" data-lang="en" style="display: none;">Clear</button>
+            <button class="btn btn-primary" onclick="addDigit('0')">0</button>
+            <button class="btn btn-success" onclick="toggleLanguage()" data-lang="is">
+                <span>English</span>
+            </button>
+            <button class="btn btn-success" onclick="toggleLanguage()" data-lang="en" style="display: none;">
+                <span>Íslenska</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentLanguage = 'is';
+
+        const messages = {
+            is: {
+                APPOINTMENT_FOUND: (data) => `Halló ${data.patientName}, bókunin þín er klukkan ${data.appointmentTime}`,
+                NO_APPOINTMENT: "Engin bókun fannst fyrir þessa kennitölu",
+                MISSING_SSN: "Vinsamlegast sláðu inn kennitölu",
+                GENERAL_ERROR: "Villa kom upp. Reyndu aftur síðar.",
+                ALREADY_ARRIVED: "Þú hefur þegar skráð þig kominn"
+            },
+            en: {
+                APPOINTMENT_FOUND: (data) => `Welcome ${data.patientName}, your appointment is at ${data.appointmentTime}`,
+                NO_APPOINTMENT: "No appointment found for this social security number",
+                MISSING_SSN: "Please enter your social security number",
+                GENERAL_ERROR: "An error occurred. Please try again later.",
+                ALREADY_ARRIVED: "You have already been marked as arrived"
+            }
+        };
+
+        function showMessageFromCode(code, data, type) {
+            const lang = currentLanguage;
+            if (!code) {
+                code = "GENERAL_ERROR";
+            }
+            let msg = messages[lang][code];
+            if (typeof msg === "function") msg = msg(data);
+            if (typeof msg !== "string") {
+                msg = `[${code}] ` + (messages[lang].GENERAL_ERROR || "An error occurred.");
+            }
+            showMessage(msg, type);
+        }
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'is' ? 'en' : 'is';
+            
+            // Toggle visibility of language-specific elements
+            document.querySelectorAll('[data-lang]').forEach(element => {
+                if (element.getAttribute('data-lang') === currentLanguage) {
+                    element.style.display = '';
+                } else {
+                    element.style.display = 'none';
+                }
+            });
+
+            updateMessages();
+            updateDateTime(); // Update date/time format when language changes
+        }
+
+        function clearMessage() {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = '';
+            messageDiv.className = 'message';
+        }
+
+        function showMessage(message, type) {
+            if (typeof message !== "string") {
+                message = messages[currentLanguage].GENERAL_ERROR || "An error occurred.";
+            }
+            const messageDiv = document.getElementById('message');
+            if (currentLanguage === 'is') {
+                if (message.includes('No appointment found')) {
+                    message = 'Engin bókun fannst fyrir þessa kennitölu';
+                } else if (message.includes('Welcome')) {
+                    message = message.replace('Welcome', 'Velkomin').replace('Your appointment is at', 'Bókunin þín er klukkan');
+                } else if (message.includes('already marked as arrived')) {
+                    message = 'Þú hefur þegar skráð þig kominn';
+                } else if (message.includes('marked as arrived')) {
+                    message = 'Þú hefur verið skráður kominn';
+                }
+            } else {
+                if (message.includes('Engin bókun fannst')) {
+                    message = 'No appointment found for this social security number';
+                } else if (message.includes('Velkomin')) {
+                    message = message.replace('Velkomin', 'Welcome').replace('Bókunin þín er klukkan', 'Your appointment is at');
+                } else if (message.includes('þegar skráð þig kominn')) {
+                    message = 'You have already been marked as arrived';
+                } else if (message.includes('skráður kominn')) {
+                    message = 'You have been marked as arrived';
+                }
+            }
+            messageDiv.textContent = message;
+            messageDiv.className = `message text-${type}`;
+            // Clear message after 10 seconds
+            setTimeout(clearMessage, 10000);
+        }
+
+        function addDigit(digit) {
+            fetch('/api/addDigit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ digit: digit })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('ssnDisplay').value = data.ssn;
+                // Automatically check appointment when SSN is complete (10 digits)
+                if (data.ssn.replace(/-/g, '').length === 10) {
+                    checkAppointment();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Error: ' + error.message, 'danger');
+            });
+        }
+
+        function clearSSN() {
+            fetch('/api/clear', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('ssnDisplay').value = data.ssn;
+                clearMessage();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Error: ' + error.message, 'danger');
+            });
+        }
+
+        function checkAppointment() {
+            fetch('/api/checkAppointment', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessageFromCode(data.code, {
+                        patientName: data.patientName,
+                        appointmentTime: data.appointmentTime
+                    }, 'success');
+                } else {
+                    showMessageFromCode(data.code, null, 'danger');
+                }
+                document.getElementById('ssnDisplay').value = '';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessageFromCode('GENERAL_ERROR', null, 'danger');
+                document.getElementById('ssnDisplay').value = '';
+            });
+        }
+
+        // Date and time display
+        function updateDateTime() {
+            const now = new Date();
+            const datetimeElement = document.getElementById('datetime');
+            
+            if (currentLanguage === 'is') {
+                // Icelandic day names
+                const days = ['Sunnudagur', 'Mánudagur', 'Þriðjudagur', 'Miðvikudagur', 'Fimmtudagur', 'Föstudagur', 'Laugardagur'];
+                // Icelandic month names
+                const months = ['Janúar', 'Febrúar', 'Mars', 'Apríl', 'Maí', 'Júní', 'Júlí', 'Ágúst', 'September', 'Október', 'Nóvember', 'Desember'];
+                
+                const day = days[now.getDay()];
+                const date = now.getDate();
+                const month = months[now.getMonth()];
+                const year = now.getFullYear();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                
+                datetimeElement.textContent = `${day} ${date}. ${month} ${year} ${hours}:${minutes}:${seconds}`;
+            } else {
+                // English format
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                };
+                datetimeElement.textContent = now.toLocaleDateString('en-US', options);
+            }
+        }
+
+        // Update date and time every second
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Initial call
+
+        // Theme handling: apply theme and listen for storage changes from admin
+        function applyTheme(theme) {
+            const root = document.body;
+            if (theme === 'light') {
+                root.classList.add('light-mode');
+            } else {
+                root.classList.remove('light-mode');
+            }
+        }
+
+        // Listen for changes made in admin (localStorage changes in other tabs)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'frontTheme') {
+                applyTheme(e.newValue || 'dark');
+            }
+        });
+
+        // Load and display all logos
+        async function loadLogos() {
+            try {
+                const res = await fetch('/api/logos');
+                const data = await res.json();
+                const container = document.getElementById('siteLogos');
+                container.innerHTML = '';
+
+                if (data.success && data.logos) {
+                    data.logos.forEach(logo => {
+                        const img = document.createElement('img');
+                        img.src = logo.url;
+                        img.className = 'site-logo';
+                        img.alt = 'Logo';
+                        container.appendChild(img);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading logos:', err);
+            }
+        }
+
+        // Initialize theme and logo
+        (function() {
+            const savedTheme = localStorage.getItem('frontTheme') || 'dark';
+            applyTheme(savedTheme);
+            loadLogos();
+            // Refresh logos every 60 seconds
+            setInterval(loadLogos, 60000);
+        })();
+    </script>
+</body>
+</html> 

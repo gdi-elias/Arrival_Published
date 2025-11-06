@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Configuration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+            color: #212529;
+        }
+        /* Dark mode support */
+        .dark-mode body {
+            background-color: #121212 !important;
+            color: #e9ecef !important;
+        }
+        .dark-mode .card {
+            background-color: #1e1e1e;
+            color: #e9ecef;
+            border-color: #2a2a2a;
+        }
+        .dark-mode .card .card-header {
+            background-color: #1a1a1a;
+        }
+        .dark-mode .form-control {
+            background-color: #2a2a2a;
+            color: #e9ecef;
+            border-color: #3a3a3a;
+        }
+        .dark-mode .btn-outline-secondary {
+            color: #e9ecef;
+            border-color: #444;
+        }
+        .database-card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .database-card .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .btn-add-db {
+            margin-bottom: 20px;
+        }
+        .test-connection {
+            margin-top: 10px;
+        }
+        .connection-status {
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        .connection-success {
+            color: #198754;
+        }
+        .connection-error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="mb-0">Database Configuration</h1>
+            <div>
+                <button id="frontThemeToggle" class="btn btn-outline-secondary" onclick="toggleFrontTheme()">Set front page theme</button>
+            </div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-header">Site Logo</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Upload New Logo</label>
+                    <input id="logoInput" type="file" accept="image/*" class="form-control" onchange="previewLogo(event)">
+                </div>
+                <div class="mb-3">
+                    <img id="logoPreview" alt="Logo Preview" style="max-height:80px; display:none;">
+                </div>
+                <button class="btn btn-primary" onclick="uploadLogo()">Upload Logo</button>
+                <hr>
+                <div class="mb-3">
+                    <label class="form-label">Current Logos</label>
+                    <div id="currentLogos" class="d-flex flex-column gap-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="databaseList">
+            <!-- Database cards will be added here -->
+        </div>
+
+        <button class="btn btn-primary btn-add-db" onclick="addDatabase()">
+            Add New Database
+        </button>
+
+        <button class="btn btn-success" onclick="saveConfigurations()">
+            Save All Configurations
+        </button>
+    </div>
+
+    <script>
+        let databases = [];
+
+        // Load existing configurations
+        async function loadConfigurations() {
+            try {
+                const response = await fetch('/api/config');
+                databases = await response.json();
+                renderDatabases();
+            } catch (error) {
+                console.error('Error loading configurations:', error);
+                alert('Failed to load configurations');
+            }
+        }
+
+        // Render all database cards
+        function renderDatabases() {
+            const container = document.getElementById('databaseList');
+            container.innerHTML = '';
+            
+            databases.forEach((db, index) => {
+                container.appendChild(createDatabaseCard(db, index));
+            });
+        }
+
+        // Create a database configuration card
+        function createDatabaseCard(db, index) {
+            const card = document.createElement('div');
+            card.className = 'card database-card';
+            card.innerHTML = `
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Database ${index + 1}</span>
+                    <button class="btn btn-danger btn-sm" onclick="removeDatabase(${index})">Remove</button>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" value="${db.name || ''}" 
+                               onchange="updateDatabase(${index}, 'name', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Server</label>
+                        <input type="text" class="form-control" value="${db.sqlServer || ''}" 
+                               onchange="updateDatabase(${index}, 'sqlServer', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Database</label>
+                        <input type="text" class="form-control" value="${db.sqlDatabase || ''}" 
+                               onchange="updateDatabase(${index}, 'sqlDatabase', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" value="${db.sqlUser || ''}" 
+                               onchange="updateDatabase(${index}, 'sqlUser', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" value="${db.sqlPassword || ''}" 
+                               onchange="updateDatabase(${index}, 'sqlPassword', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   ${db.sqlTrustServerCertificate ? 'checked' : ''}
+                                   onchange="updateDatabase(${index}, 'sqlTrustServerCertificate', this.checked)">
+                            <label class="form-check-label">Trust Server Certificate</label>
+                        </div>
+                    </div>
+                    <button class="btn btn-info test-connection" onclick="testConnection(${index})">
+                        Test Connection
+                    </button>
+                    <div class="connection-status" id="connectionStatus${index}"></div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Add a new database configuration
+        function addDatabase() {
+            databases.push({
+                name: '',
+                sqlServer: '',
+                sqlDatabase: '',
+                sqlUser: '',
+                sqlPassword: '',
+                sqlTrustServerCertificate: true
+            });
+            renderDatabases();
+        }
+
+        // Remove a database configuration
+        function removeDatabase(index) {
+            if (confirm('Are you sure you want to remove this database configuration?')) {
+                databases.splice(index, 1);
+                renderDatabases();
+            }
+        }
+
+        // Update a database configuration field
+        function updateDatabase(index, field, value) {
+            databases[index][field] = value;
+        }
+
+        // Test database connection
+        async function testConnection(index) {
+            const statusDiv = document.getElementById(`connectionStatus${index}`);
+            statusDiv.textContent = 'Testing connection...';
+            statusDiv.className = 'connection-status';
+
+            try {
+                const response = await fetch('/api/test-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(databases[index])
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    statusDiv.textContent = 'Connection successful!';
+                    statusDiv.className = 'connection-status connection-success';
+                } else {
+                    statusDiv.textContent = `Connection failed: ${result.message}`;
+                    statusDiv.className = 'connection-status connection-error';
+                }
+            } catch (error) {
+                statusDiv.textContent = 'Error testing connection';
+                statusDiv.className = 'connection-status connection-error';
+            }
+        }
+
+        // Save all configurations
+        async function saveConfigurations() {
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(databases)
+                });
+
+                if (response.ok) {
+                    alert('Configurations saved successfully!');
+                } else {
+                    throw new Error('Failed to save configurations');
+                }
+            } catch (error) {
+                console.error('Error saving configurations:', error);
+                alert('Failed to save configurations');
+            }
+        }
+
+        // Load configurations when page loads
+
+        // Load and display current logos
+        async function loadLogos() {
+            try {
+                const res = await fetch('/api/logos');
+                const data = await res.json();
+                const container = document.getElementById('currentLogos');
+                container.innerHTML = '';
+                
+                if (data.success && data.logos) {
+                    data.logos.forEach(logo => {
+                        const logoDiv = document.createElement('div');
+                        logoDiv.className = 'd-flex align-items-center gap-3 p-2 border rounded';
+                        logoDiv.innerHTML = `
+                            <img src="${logo.url}" alt="Logo" style="max-height:60px;">
+                            <button class="btn btn-danger btn-sm" onclick="deleteLogo('${logo.filename}')">Delete</button>
+                        `;
+                        container.appendChild(logoDiv);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading logos:', err);
+            }
+        }
+
+        // Preview selected logo file
+        function previewLogo(event) {
+            const preview = document.getElementById('logoPreview');
+            const file = event.target.files && event.target.files[0];
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        // Upload logo to server
+        async function uploadLogo() {
+            const input = document.getElementById('logoInput');
+            if (!input || !input.files || input.files.length === 0) {
+                alert('Please select a file to upload.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('logo', input.files[0]);
+
+            try {
+                const res = await fetch('/api/upload-logo', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                    alert('Logo uploaded successfully.');
+                    // Reset input and preview
+                    input.value = '';
+                    document.getElementById('logoPreview').style.display = 'none';
+                    // Reload logos list
+                    await loadLogos();
+                } else {
+                    alert('Upload failed: ' + (data && data.error ? data.error : 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                alert('Upload failed: ' + err.message);
+            }
+        }
+
+        // Delete logo
+        async function deleteLogo(filename) {
+            if (!confirm('Are you sure you want to delete this logo?')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/logo/${filename}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                    await loadLogos();
+                } else {
+                    alert('Failed to delete logo: ' + (data && data.error ? data.error : 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error deleting logo:', err);
+                alert('Failed to delete logo: ' + err.message);
+            }
+        }
+
+        // Add loadLogos to initialization
+        (function() {
+            loadLogos();
+        })();
+
+        // Front page theme control (updates front page via localStorage)
+        function applyFrontThemeButton() {
+            const cur = localStorage.getItem('frontTheme') || 'dark';
+            const btn = document.getElementById('frontThemeToggle');
+            if (!btn) return;
+            btn.textContent = cur === 'light' ? 'Set front page to dark' : 'Set front page to light';
+        }
+
+        function toggleFrontTheme() {
+            const current = localStorage.getItem('frontTheme') || 'dark';
+            const next = current === 'light' ? 'dark' : 'light';
+            localStorage.setItem('frontTheme', next);
+            applyFrontThemeButton();
+            alert('Front page theme set to ' + next + '. Other open front-page tabs will update automatically.');
+        }
+
+        // initialize
+        (function() {
+            applyFrontThemeButton();
+        })();
+
+        loadConfigurations();
+    </script>
+</body>
+</html> 
