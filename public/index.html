@@ -587,6 +587,14 @@
             } else {
                 root.classList.remove('light-mode');
             }
+            // also set a meta-theme-color for mobile UI where supported
+            let meta = document.querySelector('meta[name="theme-color"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'theme-color';
+                document.head.appendChild(meta);
+            }
+            meta.content = theme === 'light' ? '#f8f9fa' : '#000000';
         }
 
         // Listen for changes made in admin (localStorage changes in other tabs)
@@ -595,6 +603,20 @@
                 applyTheme(e.newValue || 'dark');
             }
         });
+
+        // Read URL query param, supporting ?theme=light or ?theme=dark
+        function getThemeFromUrl() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const t = params.get('theme');
+                if (!t) return null;
+                const lower = t.toLowerCase();
+                if (lower === 'light' || lower === 'dark') return lower;
+                return null;
+            } catch (err) {
+                return null;
+            }
+        }
 
         // Load and display all logos
         async function loadLogos() {
@@ -618,10 +640,20 @@
             }
         }
 
-        // Initialize theme and logo
+        // Initialize theme and logo. Priority:
+        // 1) URL param ?theme=light|dark (stored to sessionStorage for the tab)
+        // 2) sessionStorage frontTheme (per-tab/session)
+        // 3) localStorage frontTheme (set by admin)
         (function() {
-            const savedTheme = localStorage.getItem('frontTheme') || 'dark';
-            applyTheme(savedTheme);
+            const urlTheme = getThemeFromUrl();
+            if (urlTheme) {
+                // Respect URL override for kiosk/incognito mode; persist in session for this tab
+                try { sessionStorage.setItem('frontTheme', urlTheme); } catch (e) { /* ignore */ }
+                applyTheme(urlTheme);
+            } else {
+                const savedTheme = sessionStorage.getItem('frontTheme') || localStorage.getItem('frontTheme') || 'dark';
+                applyTheme(savedTheme);
+            }
             loadLogos();
             // Refresh logos every 60 seconds
             setInterval(loadLogos, 60000);

@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const config = require('./config');
 const fs = require('fs');
+const { encrypt } = require('./utils/crypto');
 const multer = require('multer');
 
 const app = express();
@@ -256,14 +257,23 @@ app.post('/api/config', async (req, res) => {
         config.databases = newDatabases;
 
         // Save to .env file
+        // If SECRET_KEY is provided, encrypt passwords before saving.
         const envContent = [`DATABASE_COUNT=${config.databaseCount}`];
+        const secret = process.env.SECRET_KEY || null;
         config.databases.forEach((db, index) => {
             const prefix = `DB${index + 1}_`;
             envContent.push(`${prefix}NAME=${db.name}`);
             envContent.push(`${prefix}SQL_SERVER=${db.sqlServer}`);
             envContent.push(`${prefix}SQL_DATABASE=${db.sqlDatabase}`);
             envContent.push(`${prefix}SQL_USER=${db.sqlUser}`);
-            envContent.push(`${prefix}SQL_PASSWORD=${db.sqlPassword}`);
+            try {
+                const toStore = (secret && db.sqlPassword) ? encrypt(db.sqlPassword, secret) : db.sqlPassword;
+                envContent.push(`${prefix}SQL_PASSWORD=${toStore}`);
+            } catch (err) {
+                console.error('Failed to encrypt password for', db.name, err.message);
+                // fallback to plaintext if encryption fails
+                envContent.push(`${prefix}SQL_PASSWORD=${db.sqlPassword}`);
+            }
             envContent.push(`${prefix}SQL_TRUST_SERVER_CERTIFICATE=${db.sqlTrustServerCertificate}`);
         });
 
