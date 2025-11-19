@@ -10,9 +10,12 @@ function readEnv() {
     const dbCount = parseInt(process.env.DATABASE_COUNT || '0', 10) || 0;
     const databases = [];
 
-    for (let i = 0; i < dbCount; i++) {
+    // Note: setup.js and the admin UI write DB entries as DB1_, DB2_, ... (1-based)
+    // Read environment variables using 1-based indexes so behavior after restart
+    // matches what admin/save writes to .env.
+    for (let i = 1; i <= dbCount; i++) {
         const prefix = `DB${i}_`;
-        const name = process.env[`${prefix}NAME`] || `DB${i + 1}`;
+        const name = process.env[`${prefix}NAME`] || `DB${i}`;
         const sqlServer = process.env[`${prefix}SQL_SERVER`] || '';
         const sqlDatabase = process.env[`${prefix}SQL_DATABASE`] || '';
         const sqlUser = process.env[`${prefix}SQL_USER`] || '';

@@ -2,14 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Database Configuration</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
+        /* Kiosk / touch behavior: prevent accidental pinch/zoom and dragging */
+        html, body {
+            height: 100%;
+            overflow: hidden; /* prevent page-level scrolling; use scrollable areas */
+            touch-action: none;
+            -ms-touch-action: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            overscroll-behavior: none;
             background-color: #f8f9fa;
             padding: 20px;
             color: #212529;
+        }
+
+        input, textarea, button {
+            -webkit-user-select: text;
+            user-select: text;
+            touch-action: auto;
+        }
+
+        /* Make the main content scrollable while keeping page chrome fixed */
+        #databaseList {
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            max-height: calc(100vh - 240px);
         }
         /* Dark mode support */
         .dark-mode body {
@@ -375,6 +399,35 @@
         })();
 
         loadConfigurations();
+
+        // Prevent pinch/double-tap zoom on admin page as well (kiosk)
+        (function() {
+            // Combined touchmove handler: block panning unless inside a .scrollable area or on form controls
+            document.addEventListener('touchmove', function (e) {
+                if (e.touches && e.touches.length > 1) {
+                    e.preventDefault();
+                    return;
+                }
+                const targ = e.target;
+                if (targ && targ.closest && targ.closest('input, textarea, select, #databaseList, .scrollable')) {
+                    return; // allow scrolling inside databaseList or form controls
+                }
+                e.preventDefault();
+            }, { passive: false });
+
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (e) {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, { passive: false });
+
+            window.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+            });
+        })();
     </script>
 </body>
 </html> 

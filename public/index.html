@@ -2,15 +2,48 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dental Office Check-in</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* Kiosk / touch behavior: prevent pinch-zoom, double-tap zoom and accidental dragging */
+        /* Make box-sizing predictable and prevent horizontal overflow */
+        html { box-sizing: border-box; overflow-x: hidden; }
+        *, *::before, *::after { box-sizing: inherit; }
+        html, body {
+            height: 100%;
+            overflow: hidden; /* prevent page scrolling */
+            overflow-x: hidden; /* ensure no horizontal scroll */
+            touch-action: none; /* disable pan/zoom gestures by default */
+            -ms-touch-action: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            overscroll-behavior: none;
+        }
+
+        /* Allow inputs to still be focused (but don't allow selection drag) */
+        input, textarea, button {
+            -webkit-user-select: text;
+            user-select: text;
+            touch-action: auto; /* allow interactions inside form controls */
+        }
+
+        /* Make any explicitly scrollable element allow touch scrolling.
+           Use the class .scrollable on elements that must scroll (if any). */
+        .scrollable {
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            max-height: 100%;
+        }
         body {
             background-color: #000;
             color: white;
             margin: 0;
-            padding: 20px;
+            padding: 0; /* moved padding into .container to avoid extra horizontal space */
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -41,6 +74,8 @@
             padding: 1.5vw;
             border-radius: 20px;
             aspect-ratio: 1/1.3;
+            position: relative;
+            z-index: 1000; /* ensure numpad appears above other page chrome but below toast */
         }
         .numpad button {
             width: 100%;
@@ -59,6 +94,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            z-index: 1001; /* put individual buttons above container siblings but below toast */
         }
         .numpad button::before {
             content: '';
@@ -253,6 +289,107 @@
             padding: 8px 10px;
             border-radius: 8px;
         }
+        /* Toast overlay styles */
+        .toast-overlay {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 20vh; /* sit above numpad on most layouts; moved to vh to be more robust */
+            z-index: 2147483000; /* very high to ensure toast is on top of everything */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: min(90%, 520px);
+            pointer-events: auto;
+            /* promote to its own compositor layer to avoid stacking issues */
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            left: 50%;
+        }
+        /* When full-cover mode is active, the toast will be positioned to exactly
+           cover the .numpad area. JS will add the .full-cover class and inline
+           positioning styles. */
+        .toast-overlay.full-cover {
+            left: auto;
+            transform: none;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+        .toast-overlay.full-cover .toast-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+            padding: 14px;
+            border-radius: 16px;
+            background-color: rgba(0,0,0,0.92);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        /* Light-mode variant for full-cover toast so text is dark and readable */
+        body.light-mode .toast-overlay.full-cover .toast-content {
+            background-color: #ffffff !important;
+            color: #212529 !important;
+            border: 1px solid #e6e6e6;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        /* Ensure toast text color inherits correctly in light mode */
+        body.light-mode .toast-overlay.full-cover .toast-text {
+            color: #212529 !important;
+        }
+        body.light-mode .toast-overlay .btn {
+            /* make OK button stand out in light mode */
+            color: #fff !important;
+        }
+        .toast-content {
+            background-color: rgba(0,0,0,0.9);
+            color: white;
+            padding: 16px 18px;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column; /* stack message above button */
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .toast-text {
+            flex: 0 1 auto;
+            font-size: clamp(16px, 2.4vw, 22px);
+            line-height: 1.3;
+            text-align: center;
+            word-break: break-word;
+            white-space: normal;
+        }
+        .toast-actions {
+            flex: 0 0 auto;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        .toast-overlay .btn {
+            min-width: 80px;
+            padding: 10px 14px;
+        }
+        body.light-mode .toast-content {
+            background-color: #fff;
+            color: #212529;
+            border: 1px solid #e6e6e6;
+        }
+        /* Larger toast on tablets (iPad portrait/landscape) */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .toast-overlay { width: min(85%, 640px); bottom: 30vh; }
+            .toast-content { padding: 20px 22px; }
+            .toast-text { font-size: clamp(18px, 3.2vw, 24px); }
+            .toast-overlay .btn { min-width: 92px; padding: 12px 16px; }
+        }
+        @media (min-width: 1200px) {
+            /* Desktop large monitors: bring toast slightly higher and limit width */
+            .toast-overlay { bottom: 22vh; width: min(60%, 620px); }
+        }
         /* Light/Dark theme support */
         body.light-mode {
             background-color: #f8f9fa;
@@ -266,9 +403,11 @@
             background-color: #0d6efd;
             color: white;
         }
-        body.light-mode .numpad button.btn-danger {
-            background-color: #dc3545;
-            color: white;
+        /* Keep the clear button neutral in both themes to avoid harsh red in light/dark */
+        body.light-mode .numpad button.btn-danger,
+        .numpad button.btn-danger {
+            background-color: #a5a5a5 !important;
+            color: #000 !important;
         }
         body.light-mode .numpad button.btn-success {
             background-color: #198754;
@@ -345,6 +484,89 @@
             border: none !important;
             box-shadow: none !important;
         }
+        /* iPad / tablet specific styling to improve layout and touch targets */
+        /* Tablet (iPad) portrait styles */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+            .numpad {
+                width: min(80%, 520px);
+                gap: 1.2vw;
+                padding: 2vw;
+            }
+            .numpad button {
+                font-size: clamp(22px, 3.6vw, 30px);
+            }
+            .display input {
+                font-size: clamp(30px, 4.2vw, 44px);
+                padding: 20px 14px;
+            }
+            .datetime {
+                top: 12px;
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                font-size: 1.05em;
+                padding: 8px 10px;
+                z-index: 1200;
+            }
+            .site-logos {
+                top: 12px;
+                left: 12px;
+            }
+            /* Place the datetime in-flow to avoid overlapping headings/toasts */
+            .datetime {
+                position: relative !important;
+                transform: none !important;
+                left: auto !important;
+                right: auto !important;
+                top: auto !important;
+                margin: 8px 0 6px 0;
+                width: auto;
+            }
+        }
+
+        /* Tablet landscape: two-column layout with balanced widths */
+        @media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) {
+            .container {
+                flex-direction: row;
+                justify-content: center;
+                align-items: flex-start;
+                gap: 2vw;
+                padding: 24px;
+            }
+            /* Use fixed-ish column widths for tablets in landscape so buttons keep even sizing */
+            .display {
+                width: 420px;
+                order: 1;
+                margin: 0 24px 0 0;
+            }
+            .numpad {
+                width: 420px;
+                order: 2;
+                margin: 0;
+                aspect-ratio: 1/1.3; /* preserve button proportions */
+            }
+            .message {
+                width: 40%;
+            }
+            .numpad button {
+                font-size: clamp(18px, 2.6vw, 24px);
+            }
+            /* ensure datetime doesn't overlap content */
+            .datetime {
+                top: 12px;
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                z-index: 1200;
+            }
+        }
+
+        /* Extra-targeted rule for typical 10" iPad widths to ensure balanced layout */
+        @media (min-width: 900px) and (max-width: 1100px) and (orientation: landscape) {
+            .container { gap: 1.5vw; }
+            .display, .numpad { width: 460px !important; }
+            .numpad button { font-size: clamp(18px, 2.4vw, 24px) !important; }
+        }
         /* Ensure the input has visible text and no dark background */
         body.light-mode .display input {
             /* make the display input transparent with dark text and no border */
@@ -368,7 +590,15 @@
             <input type="text" id="ssnDisplay" class="form-control" readonly value="" />
         </div>
 
-        <div id="message" class="message"></div>
+        <!-- Toast overlay for messages (appears above numpad) -->
+        <div id="toast" class="toast-overlay" role="status" aria-live="polite" style="display:none;">
+            <div class="toast-content">
+                <div id="toastText" class="toast-text"></div>
+                <div class="toast-actions">
+                    <button id="toastOk" class="btn btn-primary">OK</button>
+                </div>
+            </div>
+        </div>
 
         <div class="numpad">
             <button class="btn btn-primary" onclick="addDigit('1')">1</button>
@@ -441,17 +671,35 @@
             updateDateTime(); // Update date/time format when language changes
         }
 
+        // Toast handling (replaces the inline message box)
+        let _toastTimer = null;
         function clearMessage() {
-            const messageDiv = document.getElementById('message');
-            messageDiv.textContent = '';
-            messageDiv.className = 'message';
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.style.display = 'none';
+            const txt = document.getElementById('toastText');
+            if (txt) txt.textContent = '';
+            // clear any pending timer
+            if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+            // reset any inline positioning and remove full-cover state
+            if (toast) {
+                toast.classList.remove('full-cover');
+                toast.style.position = '';
+                toast.style.left = '';
+                toast.style.top = '';
+                toast.style.width = '';
+                toast.style.height = '';
+                toast.style.transform = '';
+                toast.style.bottom = '';
+            }
         }
 
         function showMessage(message, type) {
             if (typeof message !== "string") {
                 message = messages[currentLanguage].GENERAL_ERROR || "An error occurred.";
             }
-            const messageDiv = document.getElementById('message');
+
+            // perform the existing language-specific replacements
             if (currentLanguage === 'is') {
                 if (message.includes('No appointment found')) {
                     message = 'Engin bókun fannst fyrir þessa kennitölu';
@@ -473,10 +721,50 @@
                     message = 'You have been marked as arrived';
                 }
             }
-            messageDiv.textContent = message;
-            messageDiv.className = `message text-${type}`;
-            // Clear message after 10 seconds
-            setTimeout(clearMessage, 10000);
+
+            const toast = document.getElementById('toast');
+            const txt = document.getElementById('toastText');
+            const ok = document.getElementById('toastOk');
+            if (!toast || !txt || !ok) return;
+
+            txt.textContent = message;
+            // If numpad exists, cover it entirely so the user clearly sees they should press OK
+            const numpad = document.querySelector('.numpad');
+            if (numpad) {
+                const rect = numpad.getBoundingClientRect();
+                // apply inline fixed positioning to match numpad area
+                toast.classList.add('full-cover');
+                toast.style.position = 'fixed';
+                toast.style.left = rect.left + 'px';
+                toast.style.top = rect.top + 'px';
+                toast.style.width = rect.width + 'px';
+                toast.style.height = rect.height + 'px';
+                toast.style.transform = 'none';
+                toast.style.bottom = 'auto';
+            } else {
+                toast.classList.remove('full-cover');
+                toast.style.position = '';
+                toast.style.left = '';
+                toast.style.top = '';
+                toast.style.width = '';
+                toast.style.height = '';
+                toast.style.transform = '';
+            }
+            toast.style.display = 'flex';
+            // focus OK for accessibility
+            ok.focus();
+
+            // attach handler to OK (one-time)
+            const onOk = function() {
+                clearMessage();
+                ok.removeEventListener('click', onOk);
+            };
+            ok.removeEventListener('click', onOk);
+            ok.addEventListener('click', onOk);
+
+            // auto-hide after 10s as fallback
+            if (_toastTimer) { clearTimeout(_toastTimer); }
+            _toastTimer = setTimeout(() => { clearMessage(); }, 10000);
         }
 
         function addDigit(digit) {
@@ -658,6 +946,69 @@
             // Refresh logos every 60 seconds
             setInterval(loadLogos, 60000);
         })();
+
+        // Prevent touch-based zoom/pinch and double-tap zoom on mobile devices
+        // Uses passive:false so we can call preventDefault()
+        (function() {
+                // Prevent pinch-to-zoom (multi-touch) and prevent single-touch panning
+                // unless the event target is an input/select/textarea or inside a .scrollable element.
+                document.addEventListener('touchmove', function (e) {
+                    // Allow multi-touch prevention
+                    if (e.touches && e.touches.length > 1) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    // If interacting with a control or inside a designated scrollable area, allow it
+                    const targ = e.target;
+                    if (targ && targ.closest && targ.closest('input, textarea, select, .scrollable')) {
+                        return; // allow default (scroll or control interaction)
+                    }
+
+                    // Otherwise, prevent the touchmove to stop panning/scrolling the whole page
+                    e.preventDefault();
+                }, { passive: false });
+
+            // Prevent double-tap to zoom
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (e) {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, { passive: false });
+
+            // iOS Safari: prevent gesturestart (pinch/rotate)
+            window.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+            });
+        })();
+
+        // Move toast element to document.body to avoid stacking-context issues
+        (function() {
+            try {
+                const toast = document.getElementById('toast');
+                if (toast && toast.parentNode !== document.body) {
+                    document.body.appendChild(toast);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+
+        // If toast is shown in full-cover mode, reposition it on resize/orientation changes
+        function adjustToastFullCover() {
+            const toast = document.getElementById('toast');
+            const numpad = document.querySelector('.numpad');
+            if (!toast || !numpad) return;
+            if (!toast.classList.contains('full-cover')) return;
+            const rect = numpad.getBoundingClientRect();
+            toast.style.left = rect.left + 'px';
+            toast.style.top = rect.top + 'px';
+            toast.style.width = rect.width + 'px';
+            toast.style.height = rect.height + 'px';
+        }
+        window.addEventListener('resize', adjustToastFullCover);
+        window.addEventListener('orientationchange', function() { setTimeout(adjustToastFullCover, 120); });
     </script>
 </body>
 </html> 
